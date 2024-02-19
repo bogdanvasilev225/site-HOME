@@ -1,6 +1,6 @@
 #python stuff
 venv/
-._pylintrc
+.pylintrc
 __pycache__/
 
 #ide stuff
