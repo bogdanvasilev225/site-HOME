@@ -1,10 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import auth, messages
+from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse
-
 from carts.models import Cart
+from orders.models import Order, OrderItem
+
 from users.forms import ProfileForm, UserLoginForm, UserRegistrationForm
 
 
@@ -48,10 +50,8 @@ def registration(request):
             user = form.instance
             auth.login(request, user)
 
-
             if session_key:
                 Cart.objects.filter(session_key=session_key).update(user=user)
-
             messages.success(
                 request,
                 f"{user.username}, Вы успешно зарегистрированы и вошли в аккаунт",
@@ -77,7 +77,22 @@ def profile(request):
     else:
         form = ProfileForm(instance=request.user)
 
-    context = {"title": "Home - Кабинет", "form": form}
+    orders = (
+        Order.objects.filter(user=request.user)
+        .prefetch_related(
+            Prefetch(
+                "orderitem_set",
+                queryset=OrderItem.objects.select_related("product"),
+            )
+        )
+        .order_by("-id")
+    )
+
+    context = {
+        "title": "Home - Кабинет",
+        "form": form,
+        "orders": orders,
+    }
     return render(request, "users/profile.html", context)
 
 
